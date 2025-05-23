@@ -1,0 +1,23 @@
+services:
+  _defaults:
+    autowire: true
+    autoconfigure: true
+    public: false
+
+  App\:
+    resource: '../src/'
+    exclude:
+      - '../src/Kernel.php'
+
+  App\Controller\:
+    resource: '../src/Controller/'
+    tags: ['controller.service_arguments']
+    public: true
+
+  App\Infrastructure\Profile\Source\:
+    resource: '../src/Infrastructure/Profile/Source'
+    tags: ['profile.source']
+
+  App\Application\Profile\UseCase\GetAggregatedProfile\GetAggregatedProfileUseCase:
+    bind:
+      $sources: !tagged_iterator profile.source

@@ -1,0 +1,105 @@
+@startuml
+
+component "Email Service"
+database "Email Database"
+"Email Service" --> "Email Database"
+
+component "User Info Service"
+database "User Info Database"
+"User Info Service" --> "User Info Database"
+
+component "Health Data Service"
+database "Health Data Database"
+"Health Data Service" --> "Health Data Database"
+
+queue "Event Bus"
+
+note right of "Event Bus"
+  Redis-based queue.
+  Occasional message loss is acceptable
+  due to 1-day TTL cache expiry.
+end note
+
+"Email Service"         -> "Event Bus" : UserUpdated
+"User Info Service"     -> "Event Bus" : UserUpdated
+"Health Data Service"   -> "Event Bus" : UserUpdated
+
+package "User Profile" {
+
+    database "User Profile Database"
+
+    note right of "User Profile Database"
+      Redis
+      TTL: 1 day
+      Encrypted + Compressed
+    end note
+
+    component "User Profile Service"
+    component "Cache Layer"
+
+    component "Presenter X"
+    component "Presenter Y"
+
+    component "Priority Resolver"
+    component "Aggregator"
+
+    note right of "Aggregator"
+      Sends parallel requests to all data sources.
+      Total time depends on the slowest response.
+    end note
+
+    component "Email Transformer"
+    component "User Info Transformer"
+    component "Health Data Transformer"
+
+    component "Email Client"
+    component "User Info Client"
+    component "Health Data Client"
+
+    component "User Updated Event Listener"
+
+    "Email Transformer"       --> "Email Client"
+    "User Info Transformer"   --> "User Info Client"
+    "Health Data Transformer" --> "Health Data Client"
+
+    "Aggregator" --> "Email Transformer"
+    "Aggregator" --> "User Info Transformer"
+    "Aggregator" --> "Health Data Transformer"
+    "Aggregator" --> "Cache Layer"
+    "Aggregator" --> "Priority Resolver"
+
+    "Presenter X" --> "Aggregator"
+    "Presenter Y" --> "Aggregator"
+
+    "Presenter X" --> "Cache Layer"
+    "Presenter Y" --> "Cache Layer"
+
+    "User Profile Service" --> "Presenter X"
+    "User Profile Service" --> "Presenter Y"
+
+    "Cache Layer" --> "User Profile Database"
+
+    "Email Client"       --> "Email Service"
+    "User Info Client"   --> "User Info Service"
+    "Health Data Client" --> "Health Data Service"
+
+    "Event Bus" --> "User Updated Event Listener"
+    "User Updated Event Listener" --> "Cache Layer" : invalidate by user id
+}
+
+package "IOS App" {
+    component "IOS API Client"
+    "IOS API Client" --> "User Profile Service"
+}
+
+package "Android App" {
+    component "Android API Client"
+    "Android API Client" --> "User Profile Service"
+}
+
+package "Web Browser" {
+    component "Web API Client"
+    "Web API Client" --> "User Profile Service"
+}
+
+@enduml
